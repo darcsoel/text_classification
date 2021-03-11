@@ -1,1 +1,1 @@
-Dataset - http://qwone.com/~jason/20Newsgroups/ - second one, sorted by date; duplicates removed
+Dataset - http://qwone.com/~jason/20Newsgroups/

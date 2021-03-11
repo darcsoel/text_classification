@@ -141,5 +141,5 @@ cython_debug/
 
 20news-bydate-test/*
 20news-bydate-train/*
-
+*.csv
 venv/*
