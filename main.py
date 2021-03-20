@@ -1,3 +1,4 @@
+import multiprocessing
 import sys
 
 import matplotlib.pyplot as plt
@@ -5,7 +6,21 @@ import pandas as pd
 import seaborn as sns
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 from sklearn.metrics import accuracy_score, confusion_matrix
-from sklearn.svm import LinearSVC
+from sklearn.model_selection import GridSearchCV
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.pipeline import Pipeline
+
+
+def cpu_count():
+    cpu_count_ = multiprocessing.cpu_count()
+    if 2 < cpu_count_ <= 4:
+        cpu_count_ -= 1
+    elif 4 < cpu_count_ < 8:
+        cpu_count_ -= 2
+    else:
+        cpu_count_ -= 4
+    return cpu_count_
+
 
 if __name__ == '__main__':
     topics = pd.read_csv('topics.csv', index_col='topic')
@@ -18,20 +33,25 @@ if __name__ == '__main__':
     test_data = test_data.dropna()
     test_result = pd.merge(test_data, topics, on='topic')
 
-    vectorizer = CountVectorizer()
-    vectorizer = vectorizer.fit(train_result['text'])
-    x_count = vectorizer.transform(train_result['text'])
+    pipeline = Pipeline([
+        ('vect', CountVectorizer()),
+        ('tfidf', TfidfTransformer()),
+        ('clf', MultinomialNB()),
+    ])
 
-    tf_transformer = TfidfTransformer()
-    tf_transformer = tf_transformer.fit(x_count)
-    x_train_tfidf = tf_transformer.transform(x_count)
+    parameters = {'vect__ngram_range': ((1, 1), (2, 2), (3, 3)),
+                  'clf__alpha': (0.001, 0.01, 0.1, 1, 2, 2.5)}
+    grid = GridSearchCV(pipeline, param_grid=parameters, n_jobs=cpu_count())
+    grid.fit(train_result['text'], train_result['t_id'])
 
-    clf = LinearSVC()
-    clf.fit(x_train_tfidf, train_result['t_id'])
+    best_parameters = grid.best_estimator_.get_params()
+    clf = grid.best_estimator_
 
-    x_count_test = vectorizer.transform(test_result['text'])
-    x_test_tfidf = tf_transformer.transform(x_count_test)
-    predict = clf.predict(x_test_tfidf)
+    print(best_parameters, )
+    print(f'Best score = {grid.best_score_}')
+    print(f'Best estimator = {clf}')
+
+    predict = clf.predict(test_result['text'])
 
     accuracy = accuracy_score(test_result['t_id'], predict)
     print(f'Accuracy = {accuracy}')
@@ -42,7 +62,11 @@ if __name__ == '__main__':
     plt.ylabel('predicted')
     plt.show()
 
-    docs_new = ['God is love', 'OpenGL on the GPU is fast']
+    docs_new = ('I ca remember many times game showed guy without puck',
+                'game show lineman going running back turned corner '
+                'touchdown Is Greg ESPN trying various things get away '
+                'concept televising hockey',
+                'OpenGL on the GPU  is fast')
     for doc, pred in zip(docs_new, predict):
         predicted = topics[topics['t_id'] == pred].index.values[0]
         print(f'{doc} -> {predicted}')
