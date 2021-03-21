@@ -5,7 +5,8 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
-from sklearn.metrics import accuracy_score, confusion_matrix
+from sklearn.metrics import accuracy_score, confusion_matrix, \
+    precision_recall_fscore_support as score
 from sklearn.model_selection import GridSearchCV
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.pipeline import Pipeline
@@ -52,6 +53,11 @@ if __name__ == '__main__':
     print(f'Best estimator = {clf}')
 
     predict = clf.predict(test_result['text'])
+
+    precision, recall, fscore, _ = score(test_result['t_id'], predict)
+    print(f'Precision = {precision}')
+    print(f'Recall = {recall}')
+    print(f'Fscore = {fscore}')
 
     accuracy = accuracy_score(test_result['t_id'], predict)
     print(f'Accuracy = {accuracy}')
